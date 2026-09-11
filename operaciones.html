@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="DESGUACE: operaciones CAT, gestión de solicitudes, piezas y bajas DGT.">
+  <title>DESGUACE · Operaciones CAT</title>
+  <link rel="stylesheet" href="styles.css?v=20260911-3">
+</head>
+<body>
+<div class="shell">
+  <aside class="side">
+    <a class="brand" href="#inicio"><b>D</b><span>DESGUACE<small>operaciones CAT</small></span></a>
+    <div class="switch">
+      <small>CENTRO ACTIVO</small>
+      <strong>Gómez Alén⌄</strong>
+      <em>CAT · Ourense · conectado</em>
+    </div>
+    <nav class="nav">
+      <small>OPERATIVA</small>
+      <a class="selected" href="#inicio">⌂ Resumen <kbd>⌘1</kbd></a>
+      <a href="#solicitudes">✦ Solicitudes <i id="badgeCount">3</i></a>
+      <a href="#inventario">▦ Inventario</a>
+      <a href="#vehiculos">⌁ Vehículos</a>
+      <a href="#bajas">↘ Bajas y retiradas</a>
+      <small>ENLACES</small>
+      <a href="index.html" target="_blank">↗ Ver web pública</a>
+      <small>CONTROL</small>
+      <a href="#analitica">◒ Analítica</a>
+      <a href="#equipo">◎ Equipo</a>
+    </nav>
+    <div class="side-foot">
+      <div class="ai">
+        <span>●</span>
+        <b>Asistente activo<small>Voz Web Speech / es-ES</small></b>↗
+      </div>
+      <div class="user">
+        <b>JG</b>
+        <span>Javier Gómez<small>Gerente de desguace</small></span>•••
+      </div>
+    </div>
+  </aside>
+
+  <main id="inicio">
+    <header>
+      <button class="hamb" id="hamb" aria-label="Abrir menú">☰</button>
+      <div>
+        <small class="date" id="currentDate">MARTES, 11 DE SEPTIEMBRE DE 2026</small>
+        <h1>Buenos días, Javier <span>↗</span></h1>
+      </div>
+      <div class="tools">
+        <button title="Buscar">⌕</button>
+        <button title="Notificaciones" id="notifBtn">♢</button>
+        <a href="index.html" class="outline" style="text-decoration:none;font-size:13px;padding:6px 12px;border:1px solid #ddd;border-radius:6px;color:#333;" target="_blank">Web Pública ↗</a>
+      </div>
+    </header>
+
+    <section class="hero-grid">
+      <article class="hero">
+        <small>CENTRO DE CONTROL</small>
+        <h2>Tu desguace,<br><em>en marcha.</em></h2>
+        <p id="heroSummary">3 solicitudes necesitan una acción hoy. El asistente está listo para capturar consultas por voz o formulario.</p>
+        <button class="lime" id="openAssistant">Abrir asistente de voz <span>→</span></button>
+        <div class="ring"><strong>24/7</strong><small>recepción</small></div>
+      </article>
+      <article class="chart-card">
+        <div class="card-title">Actividad del mes <button>Este mes⌄</button></div>
+        <div class="big-number">184 <small>solicitudes captadas</small><b>+18,4%</b></div>
+        <div class="chart"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+        <div class="labels">01 sep <span>11 sep</span></div>
+      </article>
+    </section>
+
+    <section class="kpis">
+      <article>↗<div><small>TIEMPO DE RESPUESTA</small><strong>18 <sup>min</sup></strong><p><b>−32%</b> vs. mes anterior</p></div></article>
+      <article>◉<div><small>CONVERSIÓN A PRESUPUESTO</small><strong>42<sup>%</sup></strong><p><b>+8,6 pt</b> esta semana</p></div></article>
+      <article>◒<div><small>PIEZAS PUBLICADAS</small><strong>1.248</strong><p><b>86%</b> tienen ubicación</p></div></article>
+      <article>↻<div><small>STOCK ENVEJECIDO</small><strong>23</strong><p><b>−4</b> esta semana</p></div></article>
+    </section>
+
+    <section class="section" id="solicitudes">
+      <div class="section-head">
+        <div>
+          <small>BANDEJA INTELIGENTE</small>
+          <h2>Solicitudes que esperan acción</h2>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <button class="outline" id="filterAll">Todas</button>
+          <button class="outline" id="resetDataBtn" title="Restablecer ejemplos" style="font-size:11px;opacity:0.7;">Restablecer</button>
+        </div>
+      </div>
+      <div class="requests" id="requestsContainer">
+        <!-- Las solicitudes se renderizan dinámicamente mediante app.js -->
+      </div>
+    </section>
+
+    <section class="two" id="inventario">
+      <article class="panel">
+        <small>INVENTARIO EN TIEMPO REAL</small>
+        <h2>Lo que está moviéndose</h2>
+        <p>Alternadores <span>42 consultas · 14 disponibles</span><b>+24%</b></p>
+        <p>Faros delanteros <span>31 consultas · 8 disponibles</span><b>+16%</b></p>
+        <p>Cajas de cambio <span>18 consultas · 5 disponibles</span><b>+9%</b></p>
+        <a href="#inicio">Explorar inventario completo →</a>
+      </article>
+      <article class="assistant" id="equipo">
+        <small>ASISTENTE GERENTE</small>
+        <h2>Está trabajando<br>por ti.</h2>
+        <p>Ha clasificado las solicitudes entrantes y preparado las fichas para validación humana.</p>
+        <div class="progress"><b style="width:78%"></b></div>
+        <strong>78%</strong>
+        <footer>● Conexión activa · Web Speech es-ES <button id="openAssistant2">Abrir asistente →</button></footer>
+      </article>
+    </section>
+
+    <section class="two">
+      <article class="panel" id="vehiculos">
+        <small>FLUJO DE VEHÍCULOS · ESTA SEMANA</small>
+        <h2>Vehículos en proceso</h2>
+        <ul>
+          <li><b>6 vehículos recibidos</b><small>Último: Ford Focus · hace 2 h</small></li>
+          <li><b>14 piezas pendientes de prueba</b><small>3 requieren revisión prioritaria</small></li>
+          <li><b>28 piezas listas para publicar</b><small>Ubicación confirmada en 24</small></li>
+        </ul>
+      </article>
+      <article class="panel" id="bajas">
+        <small>ACCESO RÁPIDO</small>
+        <h2>¿Qué quieres hacer?</h2>
+        <div class="actions">
+          <button id="btnRegVehiculo">＋ Registrar vehículo</button>
+          <button id="btnAltaPieza">▦ Dar de alta una pieza</button>
+          <button id="btnExpBaja">↘ Crear expediente de baja</button>
+          <button id="btnBuscarInv">⌁ Buscar en inventario</button>
+        </div>
+      </article>
+    </section>
+
+    <footer class="bottom">
+      DESGUACE · sistema operativo para CAT <span>La IA propone. El profesional confirma.</span>
+    </footer>
+  </main>
+</div>
+
+<!-- Diálogo modal del Asistente Inteligente / Voz -->
+<dialog id="assistant">
+  <header>
+    <small>RECEPCIÓN INTELIGENTE</small>
+    <h2>¿Qué necesita tu cliente?</h2>
+    <button id="close" aria-label="Cerrar modal">×</button>
+  </header>
+  <div class="dialog-body">
+    <div class="voice">
+      <b id="voiceDot">✦</b>
+      <strong id="voiceText">Listo para escuchar</strong>
+      <small id="voiceSub">Web Speech API · Voz en español (es-ES)</small>
+    </div>
+
+    <div class="prompts">
+      <button type="button" data-prompt="Necesito un alternador para Renault Megane 1.5 dCi 2011">Necesito un alternador</button>
+      <button type="button" data-prompt="Quiero tramitar la baja definitiva y retirada con grúa de un Seat Ibiza">Baja de vehículo</button>
+      <button type="button" data-prompt="Taller mecánico solicita presupuesto para caja de cambios Volkswagen Golf VI">Soy un taller</button>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
+      <label style="display:flex;flex-direction:column;font-size:12px;font-weight:600;gap:4px;">
+        Nombre del cliente / Taller
+        <input type="text" id="voiceClientName" placeholder="Ej. Carlos Méndez" style="padding:8px;border:1px solid #ddd;border-radius:6px;">
+      </label>
+      <label style="display:flex;flex-direction:column;font-size:12px;font-weight:600;gap:4px;">
+        Teléfono de contacto
+        <input type="tel" id="voiceClientPhone" placeholder="Ej. 612 345 678" style="padding:8px;border:1px solid #ddd;border-radius:6px;">
+      </label>
+    </div>
+
+    <label style="display:flex;flex-direction:column;font-size:12px;font-weight:600;gap:4px;">
+      Detalle de la solicitud (escuchada o escrita)
+      <textarea id="request" placeholder="Ej. Busco un alternador para un Renault Laguna diésel de 2007. Cliente pregunta disponibilidad y precio."></textarea>
+    </label>
+
+    <div class="dialog-foot">
+      <small style="color:#666;font-size:12px;">La IA transcribe y clasifica. Un profesional confirma stock y precio.</small>
+      <div style="display:flex;gap:8px;">
+        <button class="outline" id="listen" type="button">Hablar por micro <span>◉</span></button>
+        <button class="lime" id="saveVoiceRequest" type="button">Crear solicitud <span>→</span></button>
+      </div>
+    </div>
+  </div>
+</dialog>
+
+<script src="app.js?v=20260911-3"></script>
+</body>
+</html>

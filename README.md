@@ -68,21 +68,22 @@ python deploy_hostinger.py --host ftp.cochecierto.com --user tu_usuario --dir pu
 
 ## Estructura del Proyecto
 
-- `index.html`: Landing y asistente de recepción inteligente para CAT / DESGUACE.
-- `styles.css`: Estilos visuales con diseño tipográfico y responsive.
-- `app.js`: Lógica de interacción con simulación de voz y gestión de solicitudes en memoria.
+- `index.html`: Web comercial pública del desguace (embudo de solicitud de piezas, catálogo tipo marketplace, bajas y retiradas).
+- `styles-public.css`: Estilos de la web comercial pública.
+- `public.js`: Interacción, validación de formularios y almacenamiento local de solicitudes entrantes.
+- `operaciones.html`: Centro privado de operaciones CAT para el equipo (bandeja inteligente, asistente de voz, inventario y vehículos).
+- `styles.css`: Estilos visuales del centro de operaciones.
+- `app.js`: Lógica del panel de operaciones, gestión de estados y Web Speech API en español (`es-ES`).
+- `.htaccess`: Configuración del servidor Apache para Hostinger (HTTPS, UTF-8 y caché).
 - `iniciar_desguace.bat`: Lanzador directo para Windows.
 - `deploy_hostinger.py`: Script de despliegue FTP autónomo.
 - `.github/workflows/deploy.yml`: Automatización de CI/CD para Hostinger.
+
 # Arquitectura de producto
 
 El proyecto separa deliberadamente dos experiencias:
 
-- `public.html`: web pública del desguace. Incluye inicio, embudo de solicitud de piezas, catálogo tipo marketplace, bajas y retiradas, contacto y acceso al asistente.
-- `index.html`: centro privado de operaciones para el equipo. Gestiona solicitudes, inventario, vehículos, bajas, analítica y el asistente gerente.
+- `index.html`: Web pública del desguace accesible para clientes finales en `https://desguace.cochecierto.com/`. Recoge la oportunidad y la necesidad técnica del cliente.
+- `operaciones.html`: Centro privado de operaciones para el personal del CAT en `https://desguace.cochecierto.com/operaciones.html`. Clasifica las solicitudes, permite gestionar el ciclo de vida y activar el asistente de voz.
 
-La web pública recoge la oportunidad; el SaaS interno la clasifica y la entrega a una persona para confirmar disponibilidad, precio, ubicación y entrega. No hay compra automática en esta primera fase.
-
-## Publicación
-
-Para mostrar la propuesta pública se sirve `public.html`. El acceso profesional permanece en `index.html`. Las integraciones de voz Azure Speech, WhatsApp, correo y persistencia de solicitudes se conectarán en la siguiente fase mediante sus endpoints seguros.
+La web pública recoge la oportunidad; el SaaS interno la clasifica y la entrega a una persona para confirmar disponibilidad, precio, ubicación y entrega. Sin precios inventados ni compra automática.

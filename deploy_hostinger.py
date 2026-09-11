@@ -18,11 +18,13 @@ DEFAULT_DIR = os.environ.get("HOSTINGER_FTP_DIR", "public_html/desguace")
 
 FILES_TO_UPLOAD = [
     "index.html",
-    "styles.css",
-    "app.js",
+    "operaciones.html",
     "public.html",
-    "public.js",
+    "styles.css",
     "styles-public.css",
+    "app.js",
+    "public.js",
+    ".htaccess",
 ]
 
 def upload():
