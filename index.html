@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="CocheCierto Desguaces · Centro Autorizado de Tratamiento (CAT) y recepción inteligente de solicitudes de recambios, tasaciones y bajas definitivas en España." />
+  <title>CocheCierto Desguaces · CAT & Recepción Inteligente</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="#inicio">
+      <span class="brand-mark">D</span>
+      <span>COCHECIERTO · DESGUACES<span class="brand-sub">CAT & Recepción Inteligente · desguace.cochecierto.com</span></span>
+    </a>
+    <nav>
+      <a href="#solicitud">Nueva solicitud</a>
+      <a href="#bandeja">Bandeja interna</a>
+      <a href="http://localhost:8000" target="_blank" style="color:var(--muted); font-size:11px; padding: 4px 8px; border: 1px solid var(--line); border-radius: 4px;">Volver a CocheMotor</a>
+    </nav>
+  </header>
+  <main id="inicio">
+    <section class="hero">
+      <div class="hero-copy">
+        <p class="eyebrow">CAT · ATENCIÓN CONTINUA 24/7</p>
+        <h1>Que ninguna pieza se pierda por una llamada sin responder.</h1>
+        <p class="lede">Un asistente inteligente recoge la necesidad del cliente, ordena los datos del vehículo y deja al equipo solo la confirmación técnica y comercial.</p>
+        <button class="voice-button" id="startVoice"><span class="pulse"></span> Hablar con el asistente <kbd>V</kbd></button>
+        <p class="microcopy">desguace.cochecierto.com · Voz preparada para Azure Speech Standard · Español de España</p>
+      </div>
+      <div class="voice-card">
+        <div class="card-head">
+          <span class="status-dot"></span>
+          <span id="voiceStatus">Asistente disponible</span>
+          <span class="time">24/7</span>
+        </div>
+        <div class="transcript" id="transcript">
+          <div class="bubble assistant">Hola. ¿Qué pieza, recambio o trámite de baja necesitas?</div>
+          <div class="bubble client muted">Pulsa el botón o pulsa 'V' para hablar.</div>
+        </div>
+        <div class="voice-wave"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+      </div>
+    </section>
+    <section class="trust-strip">
+      <span>01 · Recoge petición</span>
+      <span>02 · Identifica pieza / VIN</span>
+      <span>03 · Asigna a bandeja CAT</span>
+      <strong>La decisión final siempre es del equipo técnico.</strong>
+    </section>
+    <section class="workspace" id="solicitud">
+      <div class="section-heading">
+        <p class="eyebrow">Entrada estructurada</p>
+        <h2>Una solicitud lista para trabajar.</h2>
+      </div>
+      <div class="request-layout">
+        <form class="request-form" id="requestForm">
+          <label>¿Qué necesita el cliente?
+            <textarea id="need" required placeholder="Ej. alternador para Renault Laguna diésel de 2007, o baja definitiva con grúa"></textarea>
+          </label>
+          <div class="two-col">
+            <label>Contacto
+              <input id="contact" required placeholder="Teléfono o email">
+            </label>
+            <label>Canal preferido
+              <select id="channel">
+                <option>WhatsApp</option>
+                <option>Teléfono</option>
+                <option>Email</option>
+              </select>
+            </label>
+          </div>
+          <button class="primary" type="submit">Crear solicitud <span>→</span></button>
+          <p class="form-note">No se confirma precio ni compatibilidad hasta que lo revise un especialista del CAT.</p>
+        </form>
+        <aside class="handoff">
+          <div class="handoff-label">Transferencia humana</div>
+          <h3>El equipo recibe lo importante, no una conversación interminable.</h3>
+          <ul>
+            <li><span>✓</span> Resumen estructurado de la pieza y modelo</li>
+            <li><span>✓</span> Datos de contacto y canal directo</li>
+            <li><span>✓</span> Próxima acción y verificación OEM sugerida</li>
+          </ul>
+        </aside>
+      </div>
+    </section>
+    <section class="inbox" id="bandeja">
+      <div class="section-heading inline">
+        <div>
+          <p class="eyebrow">Panel interno · CAT Desguace</p>
+          <h2>Bandeja de solicitudes</h2>
+        </div>
+        <span class="counter" id="counter">2 abiertas</span>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Solicitud</th>
+              <th>Cliente</th>
+              <th>Estado</th>
+              <th>Próxima acción</th>
+            </tr>
+          </thead>
+          <tbody id="inboxBody">
+            <tr>
+              <td><strong>Alternador</strong><small>Renault Laguna · diésel · 2007</small></td>
+              <td>María G.<small>WhatsApp</small></td>
+              <td><span class="badge warm">En revisión</span></td>
+              <td>Confirmar referencia OEM</td>
+            </tr>
+            <tr>
+              <td><strong>Baja definitiva</strong><small>Seat Ibiza · 2009</small></td>
+              <td>Javier R.<small>Teléfono</small></td>
+              <td><span class="badge blue">Nueva</span></td>
+              <td>Solicitar documentación DGT</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+  <footer>
+    <span>COCHECIERTO DESGUACES · <a href="https://desguace.cochecierto.com/" target="_blank" style="text-decoration: underline;">desguace.cochecierto.com</a></span>
+    <span>La IA propone. El profesional confirma.</span>
+  </footer>
+  <script src="app.js"></script>
+</body>
+</html>
