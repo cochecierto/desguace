@@ -20,6 +20,9 @@ FILES_TO_UPLOAD = [
     "index.html",
     "styles.css",
     "app.js",
+    "public.html",
+    "public.js",
+    "styles-public.css",
 ]
 
 def upload():
