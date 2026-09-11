@@ -74,3 +74,15 @@ python deploy_hostinger.py --host ftp.cochecierto.com --user tu_usuario --dir pu
 - `iniciar_desguace.bat`: Lanzador directo para Windows.
 - `deploy_hostinger.py`: Script de despliegue FTP autónomo.
 - `.github/workflows/deploy.yml`: Automatización de CI/CD para Hostinger.
+# Arquitectura de producto
+
+El proyecto separa deliberadamente dos experiencias:
+
+- `public.html`: web pública del desguace. Incluye inicio, embudo de solicitud de piezas, catálogo tipo marketplace, bajas y retiradas, contacto y acceso al asistente.
+- `index.html`: centro privado de operaciones para el equipo. Gestiona solicitudes, inventario, vehículos, bajas, analítica y el asistente gerente.
+
+La web pública recoge la oportunidad; el SaaS interno la clasifica y la entrega a una persona para confirmar disponibilidad, precio, ubicación y entrega. No hay compra automática en esta primera fase.
+
+## Publicación
+
+Para mostrar la propuesta pública se sirve `public.html`. El acceso profesional permanece en `index.html`. Las integraciones de voz Azure Speech, WhatsApp, correo y persistencia de solicitudes se conectarán en la siguiente fase mediante sus endpoints seguros.
