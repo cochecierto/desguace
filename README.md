@@ -1,9 +1,9 @@
-# CocheCierto Desguaces · Recepción Inteligente para CAT
+# DESGUACE · Recepción Inteligente para CAT
 
 MVP para Centros Autorizados de Tratamiento (CAT) y desguaces en España: asistente web de captura inteligente de solicitudes de recambios y bajas definitivas DGT, con panel de control y bandeja de seguimiento.
 
 - **Subdominio de producción:** [https://desguace.cochecierto.com/](https://desguace.cochecierto.com/)
-- **Repositorio GitHub:** [https://github.com/cochecierto/desguaces](https://github.com/cochecierto/desguaces)
+- **Repositorio GitHub:** [https://github.com/cochecierto/desguace](https://github.com/cochecierto/desguace)
 
 ---
 
@@ -27,7 +27,7 @@ Y abrir en tu navegador: [http://localhost:8080](http://localhost:8080)
 
 ## 2. Despliegue en GitHub
 
-El repositorio está vinculado a `https://github.com/cochecierto/desguaces.git`.
+El repositorio está vinculado a `https://github.com/cochecierto/desguace.git`.
 
 Para enviar los cambios a GitHub:
 
@@ -68,7 +68,7 @@ python deploy_hostinger.py --host ftp.cochecierto.com --user tu_usuario --dir pu
 
 ## Estructura del Proyecto
 
-- `index.html`: Landing y asistente de recepción inteligente para CAT / Desguaces.
+- `index.html`: Landing y asistente de recepción inteligente para CAT / DESGUACE.
 - `styles.css`: Estilos visuales con diseño tipográfico y responsive.
 - `app.js`: Lógica de interacción con simulación de voz y gestión de solicitudes en memoria.
 - `iniciar_desguace.bat`: Lanzador directo para Windows.

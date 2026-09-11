@@ -1,9 +1,9 @@
 @echo off
 chcp 65001 >nul
-title CocheCierto Desguaces - Servidor Local
+title DESGUACE - Servidor Local
 
 echo ===================================================
-echo  CocheCierto Desguaces · CAT Recepción Inteligente
+echo  DESGUACE · CAT Recepción Inteligente
 echo  Subdominio de produccion: https://desguace.cochecierto.com/
 echo ===================================================
 echo.
