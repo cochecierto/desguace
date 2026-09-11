@@ -3,9 +3,121 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="description" content="DESGUACE: operaciones CAT, gestión de solicitudes, piezas y bajas DGT.">
+  <meta name="robots" content="noindex,nofollow">
   <title>DESGUACE · Operaciones CAT</title>
-  <link rel="stylesheet" href="styles.css?v=20260911-3">
+  <link rel="stylesheet" href="styles.css?v=20260911-4">
+  <style>
+    /* Estilos complementarios para modales operativos y gestión de solicitudes */
+    .detail-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    .detail-card {
+      background: var(--paper);
+      padding: 12px 14px;
+      border: 1px solid var(--line);
+      border-radius: 4px;
+    }
+    .detail-card small {
+      display: block;
+      font: 10px 'DM Mono';
+      color: var(--muted);
+      margin-bottom: 4px;
+      text-transform: uppercase;
+    }
+    .detail-card strong {
+      font-size: 14px;
+      display: block;
+      color: var(--ink);
+    }
+    .contact-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 8px;
+    }
+    .contact-actions a, .contact-actions button {
+      padding: 6px 10px;
+      font-size: 11px;
+      border: 1px solid var(--line);
+      background: var(--card);
+      border-radius: 4px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      text-decoration: none;
+      color: var(--ink);
+      font-weight: 600;
+    }
+    .contact-actions a.wa {
+      background: #e6f7ec;
+      border-color: #a3e2bb;
+      color: #1b6336;
+    }
+    .audit-trail {
+      margin-top: 18px;
+      border-top: 1px solid var(--line);
+      padding-top: 14px;
+      max-height: 160px;
+      overflow-y: auto;
+    }
+    .audit-item {
+      font-size: 11px;
+      padding: 6px 0;
+      border-bottom: 1px dashed var(--line);
+      color: #444;
+    }
+    .audit-item small {
+      font: 9px 'DM Mono';
+      color: var(--muted);
+      margin-right: 8px;
+    }
+    .form-row {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      margin-bottom: 12px;
+    }
+    .form-row label {
+      font: 11px 'DM Mono';
+      color: var(--muted);
+    }
+    .form-row input, .form-row select, .form-row textarea {
+      padding: 8px 10px;
+      border: 1px solid var(--line);
+      background: #fff;
+      font: 12px Manrope, sans-serif;
+      border-radius: 4px;
+    }
+    .form-row select {
+      font-weight: 600;
+    }
+    .form-grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+    .live-search-results {
+      max-height: 240px;
+      overflow-y: auto;
+      border: 1px solid var(--line);
+      background: #fff;
+      margin-top: 12px;
+    }
+    .live-search-item {
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--line);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 12px;
+    }
+    .live-search-item:hover {
+      background: var(--paper);
+    }
+  </style>
 </head>
 <body>
 <div class="shell">
@@ -13,13 +125,13 @@
     <a class="brand" href="#inicio"><b>D</b><span>DESGUACE<small>operaciones CAT</small></span></a>
     <div class="switch">
       <small>CENTRO ACTIVO</small>
-      <strong>Gómez Alén⌄</strong>
-      <em>CAT · Ourense · conectado</em>
+      <strong>Centro CAT Principal⌄</strong>
+      <em>CAT Homologado · Conectado</em>
     </div>
     <nav class="nav">
       <small>OPERATIVA</small>
       <a class="selected" href="#inicio">⌂ Resumen <kbd>⌘1</kbd></a>
-      <a href="#solicitudes">✦ Solicitudes <i id="badgeCount">3</i></a>
+      <a href="#solicitudes">✦ Solicitudes <i id="badgeCount">0</i></a>
       <a href="#inventario">▦ Inventario</a>
       <a href="#vehiculos">⌁ Vehículos</a>
       <a href="#bajas">↘ Bajas y retiradas</a>
@@ -34,23 +146,26 @@
         <span>●</span>
         <b>Asistente activo<small>Voz Web Speech / es-ES</small></b>↗
       </div>
-      <div class="user">
-        <b>JG</b>
-        <span>Javier Gómez<small>Gerente de desguace</small></span>•••
+      <div class="user" style="display:flex;align-items:center;justify-content:space-between;width:100%;">
+        <div style="display:flex;align-items:center;gap:8px;">
+          <b id="userAvatar">OP</b>
+          <span><strong id="userDisplayName">Operador CAT</strong><small id="userRole">Responsable de Guardia</small></span>
+        </div>
+        <button id="logoutBtn" title="Cerrar sesión segura" style="background:none;border:none;color:#91a099;cursor:pointer;font-size:16px;padding:4px 6px;">⎋</button>
       </div>
     </div>
   </aside>
 
-  <main id="inicio">
-    <header>
+  <main class="main-content" id="inicio">
+    <header class="topbar">
       <button class="hamb" id="hamb" aria-label="Abrir menú">☰</button>
       <div>
-        <small class="date" id="currentDate">MARTES, 11 DE SEPTIEMBRE DE 2026</small>
-        <h1>Buenos días, Javier <span>↗</span></h1>
+        <small class="date" id="currentDate">CARGANDO FECHA…</small>
+        <h1 id="userGreeting">Panel Operativo CAT <span>↗</span></h1>
       </div>
       <div class="tools">
-        <button title="Buscar">⌕</button>
-        <button title="Notificaciones" id="notifBtn">♢</button>
+        <button title="Buscar en inventario" id="btnSearchTopbar">⌕</button>
+        <button title="Notificaciones activas" id="notifBtn">♢</button>
         <a href="index.html" class="outline" style="text-decoration:none;font-size:13px;padding:6px 12px;border:1px solid #ddd;border-radius:6px;color:#333;" target="_blank">Web Pública ↗</a>
       </div>
     </header>
@@ -59,38 +174,47 @@
       <article class="hero">
         <small>CENTRO DE CONTROL</small>
         <h2>Tu desguace,<br><em>en marcha.</em></h2>
-        <p id="heroSummary">3 solicitudes necesitan una acción hoy. El asistente está listo para capturar consultas por voz o formulario.</p>
+        <p id="heroSummary">Sincronizando solicitudes en tiempo real…</p>
         <button class="lime" id="openAssistant">Abrir asistente de voz <span>→</span></button>
         <div class="ring"><strong>24/7</strong><small>recepción</small></div>
       </article>
       <article class="chart-card">
-        <div class="card-title">Actividad del mes <button>Este mes⌄</button></div>
-        <div class="big-number">184 <small>solicitudes captadas</small><b>+18,4%</b></div>
-        <div class="chart"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
-        <div class="labels">01 sep <span>11 sep</span></div>
+        <div class="card-title">Actividad del mes <button id="chartMonthLabel">Este mes⌄</button></div>
+        <div class="big-number"><span id="kpiMonthCount">...</span> <small>solicitudes captadas</small><b id="kpiMonthGrowth">+18,4%</b></div>
+        <div class="chart" id="chartBars">
+          <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+        </div>
+        <div class="labels">01 <span id="chartTodayLabel">Hoy</span></div>
       </article>
     </section>
 
     <section class="kpis">
-      <article>↗<div><small>TIEMPO DE RESPUESTA</small><strong>18 <sup>min</sup></strong><p><b>−32%</b> vs. mes anterior</p></div></article>
-      <article>◉<div><small>CONVERSIÓN A PRESUPUESTO</small><strong>42<sup>%</sup></strong><p><b>+8,6 pt</b> esta semana</p></div></article>
-      <article>◒<div><small>PIEZAS PUBLICADAS</small><strong>1.248</strong><p><b>86%</b> tienen ubicación</p></div></article>
-      <article>↻<div><small>STOCK ENVEJECIDO</small><strong>23</strong><p><b>−4</b> esta semana</p></div></article>
+      <article>↗<div><small>TIEMPO DE RESPUESTA</small><strong id="kpiRespTime">18 <sup>min</sup></strong><p><b>−32%</b> vs. mes anterior</p></div></article>
+      <article>◉<div><small>CONVERSIÓN A PRESUPUESTO</small><strong id="kpiConversion">42<sup>%</sup></strong><p><b>+8,6 pt</b> esta semana</p></div></article>
+      <article>◒<div><small>PIEZAS EN STOCK</small><strong id="kpiTotalParts">...</strong><p><b id="kpiLocatedPercent">...%</b> con ubicación</p></div></article>
+      <article>↻<div><small>VEHÍCULOS EN PROCESO</small><strong id="kpiVehiclesInProcess">...</strong><p><b>Campa CAT activa</b></p></div></article>
     </section>
 
     <section class="section" id="solicitudes">
       <div class="section-head">
         <div>
-          <small>BANDEJA INTELIGENTE</small>
+          <small>BANDEJA INTELIGENTE · BASE DE DATOS CAT</small>
           <h2>Solicitudes que esperan acción</h2>
         </div>
         <div style="display:flex;gap:8px;align-items:center;">
-          <button class="outline" id="filterAll">Todas</button>
-          <button class="outline" id="resetDataBtn" title="Restablecer ejemplos" style="font-size:11px;opacity:0.7;">Restablecer</button>
+          <select id="filterStatus" style="font-size:11px;padding:6px 10px;border:1px solid var(--line);background:#fff;border-radius:4px;">
+            <option value="all">Todas las solicitudes</option>
+            <option value="nueva">Solo Nuevas</option>
+            <option value="en_estudio">En estudio</option>
+            <option value="presupuestada">Presupuestadas</option>
+            <option value="contactada">Contactadas</option>
+            <option value="cerrada_exito">Cerradas con éxito</option>
+          </select>
+          <button class="outline" id="refreshRequestsBtn" title="Actualizar desde el servidor">↻ Actualizar</button>
         </div>
       </div>
       <div class="requests" id="requestsContainer">
-        <!-- Las solicitudes se renderizan dinámicamente mediante app.js -->
+        <!-- Solicitudes renderizadas dinámicamente desde api/requests.php -->
       </div>
     </section>
 
@@ -98,17 +222,17 @@
       <article class="panel">
         <small>INVENTARIO EN TIEMPO REAL</small>
         <h2>Lo que está moviéndose</h2>
-        <p>Alternadores <span>42 consultas · 14 disponibles</span><b>+24%</b></p>
-        <p>Faros delanteros <span>31 consultas · 8 disponibles</span><b>+16%</b></p>
-        <p>Cajas de cambio <span>18 consultas · 5 disponibles</span><b>+9%</b></p>
-        <a href="#inicio">Explorar inventario completo →</a>
+        <div id="inventoryPreviewContainer">
+          <p>Cargando inventario registrado…</p>
+        </div>
+        <a href="javascript:void(0)" id="btnOpenSearchInv">Explorar inventario completo →</a>
       </article>
       <article class="assistant" id="equipo">
         <small>ASISTENTE GERENTE</small>
         <h2>Está trabajando<br>por ti.</h2>
-        <p>Ha clasificado las solicitudes entrantes y preparado las fichas para validación humana.</p>
-        <div class="progress"><b style="width:78%"></b></div>
-        <strong>78%</strong>
+        <p>Clasifica las consultas entrantes por formulario web y voz para validación del profesional técnico.</p>
+        <div class="progress"><b id="assistantProgressBar" style="width:78%"></b></div>
+        <strong id="assistantProgressPercent">78%</strong>
         <footer>● Conexión activa · Web Speech es-ES <button id="openAssistant2">Abrir asistente →</button></footer>
       </article>
     </section>
@@ -117,14 +241,12 @@
       <article class="panel" id="vehiculos">
         <small>FLUJO DE VEHÍCULOS · ESTA SEMANA</small>
         <h2>Vehículos en proceso</h2>
-        <ul>
-          <li><b>6 vehículos recibidos</b><small>Último: Ford Focus · hace 2 h</small></li>
-          <li><b>14 piezas pendientes de prueba</b><small>3 requieren revisión prioritaria</small></li>
-          <li><b>28 piezas listas para publicar</b><small>Ubicación confirmada en 24</small></li>
+        <ul id="vehiclesPreviewContainer">
+          <li><b>Cargando vehículos registrados…</b></li>
         </ul>
       </article>
       <article class="panel" id="bajas">
-        <small>ACCESO RÁPIDO</small>
+        <small>ACCESO RÁPIDO OPERATIVO</small>
         <h2>¿Qué quieres hacer?</h2>
         <div class="actions">
           <button id="btnRegVehiculo">＋ Registrar vehículo</button>
@@ -136,7 +258,7 @@
     </section>
 
     <footer class="bottom">
-      DESGUACE · sistema operativo para CAT <span>La IA propone. El profesional confirma.</span>
+      DESGUACE · sistema operativo para CAT <span id="systemStatusBadge">● Conectando con servidor…</span>
     </footer>
   </main>
 </div>
@@ -146,7 +268,7 @@
   <header>
     <small>RECEPCIÓN INTELIGENTE</small>
     <h2>¿Qué necesita tu cliente?</h2>
-    <button id="close" aria-label="Cerrar modal">×</button>
+    <button class="close-dialog" id="close" aria-label="Cerrar modal">×</button>
   </header>
   <div class="dialog-body">
     <div class="voice">
@@ -178,15 +300,251 @@
     </label>
 
     <div class="dialog-foot">
-      <small style="color:#666;font-size:12px;">La IA transcribe y clasifica. Un profesional confirma stock y precio.</small>
+      <small style="color:#666;font-size:12px;">La IA transcribe y clasifica. El profesional confirma stock y precio.</small>
       <div style="display:flex;gap:8px;">
         <button class="outline" id="listen" type="button">Hablar por micro <span>◉</span></button>
-        <button class="lime" id="saveVoiceRequest" type="button">Crear solicitud <span>→</span></button>
+        <button class="lime" id="saveVoiceRequest" type="button">Guardar en Base de Datos <span>→</span></button>
       </div>
     </div>
   </div>
 </dialog>
 
-<script src="app.js?v=20260911-3"></script>
+<!-- Diálogo Modal: Ficha de Solicitud & Auditoría -->
+<dialog id="modalRequestDetail">
+  <header>
+    <small id="modalReqSubtitle">GESTIÓN DE SOLICITUD · CAT</small>
+    <h2 id="modalReqTitle">Solicitud de pieza</h2>
+    <button class="close-dialog" id="closeReqDetail" aria-label="Cerrar">×</button>
+  </header>
+  <div class="dialog-body">
+    <div class="detail-grid">
+      <div class="detail-card">
+        <small>Pieza y Vehículo</small>
+        <strong id="detailPartVehicle">-</strong>
+      </div>
+      <div class="detail-card">
+        <small>Cliente y Canal</small>
+        <strong id="detailPersonChannel">-</strong>
+        <div class="contact-actions" id="detailContactActions">
+          <!-- Botones de llamada y WhatsApp -->
+        </div>
+      </div>
+    </div>
+
+    <form id="formUpdateState">
+      <input type="hidden" id="editRequestId">
+      <div class="form-grid-2">
+        <div class="form-row">
+          <label for="editStatus">Estado operativo</label>
+          <select id="editStatus">
+            <option value="nueva">Nueva · Pendiente de validar</option>
+            <option value="en_estudio">En estudio · Comprobando stock</option>
+            <option value="presupuestada">Presupuestada · Oferta lista</option>
+            <option value="contactada">Contactada · En negociación</option>
+            <option value="cerrada_exito">✓ Cerrada con éxito (Venta/Baja)</option>
+            <option value="cerrada_desestimada">✕ Desestimada / Sin disponibilidad</option>
+          </select>
+        </div>
+        <div class="form-row">
+          <label for="editPriceQuote">Presupuesto comunicado (€)</label>
+          <input type="text" id="editPriceQuote" placeholder="Ej. 75€ con envío">
+        </div>
+      </div>
+
+      <div class="form-row">
+        <label for="editNotes">Notas internas / Bitácora del operador</label>
+        <textarea id="editNotes" placeholder="Añade observaciones sobre la pieza, ubicación o conversación con el cliente..."></textarea>
+      </div>
+
+      <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:10px;">
+        <button type="submit" class="lime" id="btnSaveReqUpdate">Guardar y registrar auditoría <span>→</span></button>
+      </div>
+    </form>
+
+    <div class="audit-trail">
+      <label style="font:10px 'DM Mono';color:var(--muted);text-transform:uppercase;">Historial de Auditoría</label>
+      <div id="auditLogContainer">
+        <!-- Entradas de auditoría -->
+      </div>
+    </div>
+  </div>
+</dialog>
+
+<!-- Diálogo Modal: Registrar Vehículo CAT -->
+<dialog id="modalVehiculo">
+  <header>
+    <small>ENTRADA AL CAT</small>
+    <h2>Registrar Vehículo en Campa</h2>
+    <button class="close-dialog" id="closeVehiculo" aria-label="Cerrar">×</button>
+  </header>
+  <div class="dialog-body">
+    <form id="formVehiculo">
+      <div class="form-grid-2">
+        <div class="form-row">
+          <label for="vehPlate">Matrícula *</label>
+          <input type="text" id="vehPlate" required placeholder="Ej. 4589-FXG">
+        </div>
+        <div class="form-row">
+          <label for="vehYear">Año del vehículo</label>
+          <input type="number" id="vehYear" value="2010" min="1980" max="2027">
+        </div>
+      </div>
+
+      <div class="form-row">
+        <label for="vehMakeModel">Marca y modelo exacto *</label>
+        <input type="text" id="vehMakeModel" required placeholder="Ej. Ford Focus 1.6 TDCi 110cv">
+      </div>
+
+      <div class="form-grid-2">
+        <div class="form-row">
+          <label for="vehStatus">Fase operativa inicial</label>
+          <select id="vehStatus">
+            <option value="Recibido en campa">Recibido en campa</option>
+            <option value="En descontaminación">En descontaminación de fluidos</option>
+            <option value="Despiece activo">Despiece activo de mecánica</option>
+          </select>
+        </div>
+        <div class="form-row">
+          <label for="vehBaja">Estado de Baja DGT</label>
+          <select id="vehBaja">
+            <option value="Pendiente de trámite">Pendiente de trámite</option>
+            <option value="Tramitada">Tramitada telemáticamente</option>
+            <option value="Certificado emitido">Certificado de destrucción emitido</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <label for="vehNotes">Observaciones técnicas / Daños</label>
+        <textarea id="vehNotes" placeholder="Golpe frontal, mecánica sana, llantas de aluminio..."></textarea>
+      </div>
+
+      <div class="dialog-foot">
+        <small>El vehículo se registra en la base de datos operativa del CAT.</small>
+        <button type="submit" class="lime">Guardar vehículo <span>→</span></button>
+      </div>
+    </form>
+  </div>
+</dialog>
+
+<!-- Diálogo Modal: Dar de alta pieza en inventario -->
+<dialog id="modalPieza">
+  <header>
+    <small>CATALOGACIÓN DE STOCK</small>
+    <h2>Dar de alta una pieza recuperada</h2>
+    <button class="close-dialog" id="closePieza" aria-label="Cerrar">×</button>
+  </header>
+  <div class="dialog-body">
+    <form id="formPieza">
+      <div class="form-row">
+        <label for="partName">Denominación de la pieza y referencia OEM *</label>
+        <input type="text" id="partName" required placeholder="Ej. Alternador Valeo 150A TG15C028">
+      </div>
+
+      <div class="form-row">
+        <label for="partVehicle">Vehículos compatibles *</label>
+        <input type="text" id="partVehicle" required placeholder="Ej. Renault Laguna / Megane / Scenic 1.9 dCi">
+      </div>
+
+      <div class="form-grid-2">
+        <div class="form-row">
+          <label for="partCategory">Categoría</label>
+          <select id="partCategory">
+            <option value="Electricidad">Electricidad (Alternadores, Arranques)</option>
+            <option value="Óptica">Óptica (Faros, Pilotos)</option>
+            <option value="Motor">Motor y Culatas</option>
+            <option value="Transmisión">Cajas de cambio y Embragues</option>
+            <option value="Carrocería">Carrocería</option>
+            <option value="Frenos / Suspensión">Frenos y Suspensión</option>
+          </select>
+        </div>
+        <div class="form-row">
+          <label for="partPrice">Precio PVP estimado (€)</label>
+          <input type="number" step="0.5" id="partPrice" required placeholder="Ej. 75.00">
+        </div>
+      </div>
+
+      <div class="form-row">
+        <label for="partLocation">Ubicación física en almacén *</label>
+        <input type="text" id="partLocation" required placeholder="Ej. Pasillo E · Estantería 03 · Balda 2">
+      </div>
+
+      <div class="dialog-foot">
+        <small>Comprobada en banco de pruebas con garantía.</small>
+        <button type="submit" class="lime">Catalogar pieza <span>→</span></button>
+      </div>
+    </form>
+  </div>
+</dialog>
+
+<!-- Diálogo Modal: Expediente de Baja DGT -->
+<dialog id="modalBaja">
+  <header>
+    <small>TRÁMITE TELEMÁTICO DGT</small>
+    <h2>Crear expediente de baja definitiva</h2>
+    <button class="close-dialog" id="closeBaja" aria-label="Cerrar">×</button>
+  </header>
+  <div class="dialog-body">
+    <form id="formBaja">
+      <div class="form-grid-2">
+        <div class="form-row">
+          <label for="bajaPlate">Matrícula del vehículo *</label>
+          <input type="text" id="bajaPlate" required placeholder="Ej. 1234-BBB">
+        </div>
+        <div class="form-row">
+          <label for="bajaDni">DNI / CIF del titular *</label>
+          <input type="text" id="bajaDni" required placeholder="Ej. 12345678Z">
+        </div>
+      </div>
+
+      <div class="form-row">
+        <label for="bajaOwner">Nombre y apellidos del titular *</label>
+        <input type="text" id="bajaOwner" required placeholder="Ej. Antonio Morales">
+      </div>
+
+      <div class="form-grid-2">
+        <div class="form-row">
+          <label for="bajaPhone">Teléfono de contacto *</label>
+          <input type="tel" id="bajaPhone" required placeholder="Ej. 600 123 456">
+        </div>
+        <div class="form-row">
+          <label for="bajaLocation">Ubicación del vehículo (Grúa)</label>
+          <input type="text" id="bajaLocation" placeholder="Ej. Campa / Garaje / Vía pública">
+        </div>
+      </div>
+
+      <div class="dialog-foot">
+        <small>Se genera solicitud prioritaria y registro en el CAT.</small>
+        <button type="submit" class="lime">Crear expediente <span>→</span></button>
+      </div>
+    </form>
+  </div>
+</dialog>
+
+<!-- Diálogo Modal: Buscador de Inventario -->
+<dialog id="modalBuscarInv">
+  <header>
+    <small>CONSULTA RÁPIDA DE STOCK</small>
+    <h2>Buscador de piezas y almacén</h2>
+    <button class="close-dialog" id="closeBuscarInv" aria-label="Cerrar">×</button>
+  </header>
+  <div class="dialog-body">
+    <div class="form-row">
+      <label for="invSearchInput">Buscar por pieza, modelo, OEM o pasillo:</label>
+      <input type="text" id="invSearchInput" placeholder="Escribe para buscar (ej. alternador, Megane, Pasillo B, CAYC)..." autocomplete="off">
+    </div>
+
+    <div class="live-search-results" id="invSearchResults">
+      <div style="padding:16px;text-align:center;color:#666;font-size:12px;">Escribe una palabra para buscar en las piezas catalogadas.</div>
+    </div>
+
+    <div class="dialog-foot">
+      <small id="invResultsCount">0 piezas encontradas</small>
+      <button type="button" class="outline" id="btnCloseSearchModal">Cerrar</button>
+    </div>
+  </div>
+</dialog>
+
+<script src="app.js?v=20260911-4"></script>
 </body>
 </html>

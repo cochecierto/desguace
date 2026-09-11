@@ -36,36 +36,50 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
       }
 
-      // Estructura de la solicitud
-      const newRequest = {
-        id: 'REQ-' + Math.floor(1000 + Math.random() * 9000),
-        part: part,
-        vehicle: yearFuel ? `${vehicle} · ${yearFuel}` : vehicle,
-        person: name,
-        phone: phone,
-        channel: 'Web pública',
-        time: 'hace 1 min',
-        status: 'Nueva',
-        action: 'Validar referencia y stock',
-        tagColor: 'orange'
-      };
-
-      // Guardar en localStorage compartido con el panel de operaciones
-      try {
-        const stored = JSON.parse(localStorage.getItem('desguace_solicitudes') || '[]');
-        stored.unshift(newRequest);
-        localStorage.setItem('desguace_solicitudes', JSON.stringify(stored));
-      } catch (err) {
-        console.warn('Error guardando en localStorage:', err);
+      // Enviar solicitud al servidor mediante la API persistente
+      const submitBtn = form.querySelector('#btnSubmitRequest');
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = 'Enviando solicitud al desguace…';
       }
 
-      // Mensaje de confirmación al usuario
-      showFeedback(
-        `✓ <strong>¡Solicitud enviada con éxito!</strong> Hemos registrado tu petición para <em>${part}</em> (${vehicle}). Nuestro equipo técnico comprobará el stock y te contactará al <strong>${phone}</strong>.`,
-        true
-      );
-
-      form.reset();
+      fetch('api/requests.php', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify({
+          part: part,
+          vehicle: yearFuel ? `${vehicle} · ${yearFuel}` : vehicle,
+          person: name,
+          phone: phone,
+          channel: 'Web pública'
+        })
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.success && data.data) {
+          const reqId = data.data.id || 'REQ';
+          showFeedback(
+            `✓ <strong>¡Solicitud registrada con éxito (#${reqId})!</strong> Hemos guardado tu petición para <em>${part}</em> (${vehicle}) en el centro CAT. Nuestro equipo técnico comprobará el stock y te contactará al <strong>${phone}</strong>.`,
+            true
+          );
+          form.reset();
+        } else {
+          showFeedback(data.error || 'No se pudo registrar la solicitud. Por favor, llámanos al 900 000 000.', false);
+        }
+      })
+      .catch(err => {
+        console.warn('Error conectando con la API:', err);
+        showFeedback('Error de conexión con el servidor. Por favor, llámanos directamente al 900 000 000 o escríbenos por WhatsApp.', false);
+      })
+      .finally(() => {
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.innerHTML = 'Enviar solicitud al desguace <span>→</span>';
+        }
+      });
     });
   }
 

@@ -21,8 +21,8 @@ jobs:
           username: ${{ secrets.HOSTINGER_FTP_USER || secrets.FTP_USERNAME }}
           password: ${{ secrets.HOSTINGER_FTP_PASSWORD || secrets.FTP_PASSWORD }}
           # Directorio de destino en Hostinger para el subdominio desguace.cochecierto.com
-          # Puede ser 'domains/desguace.cochecierto.com/public_html/' o 'public_html/desguace/'
-          server-dir: ${{ secrets.HOSTINGER_FTP_DIR || 'public_html/' }}
+          # Por defecto apunta a la carpeta del subdominio: public_html/desguace/
+          server-dir: ${{ secrets.HOSTINGER_FTP_DIR || 'public_html/desguace/' }}
           exclude: |
             **/.git*
             **/.git*/**
@@ -31,3 +31,9 @@ jobs:
             README.md
             deploy_hostinger.py
             iniciar_desguace.bat
+            test_*.php
+            tests/**
+            __pycache__/**
+            api/data/*.json
+            api/data/*.sqlite
+            api/data/*.db

@@ -2,3 +2,10 @@ __pycache__/
 *.pyc
 .DS_Store
 Thumbs.db
+
+# Almacenamiento local persistente
+api/data/*.json
+api/data/*.sqlite
+api/data/*.db
+!api/data/.htaccess
+!api/data/.gitkeep

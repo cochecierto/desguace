@@ -1,89 +1,100 @@
-# DESGUACE · Recepción Inteligente para CAT
+# DESGUACE · Sistema Operativo para CAT
 
-MVP para Centros Autorizados de Tratamiento (CAT) y desguaces en España: asistente web de captura inteligente de solicitudes de recambios y bajas definitivas DGT, con panel de control y bandeja de seguimiento.
+Sistema integral para Centros Autorizados de Tratamiento (CAT) y desguaces: captación pública de solicitudes de piezas y bajas DGT, panel privado de operaciones con autenticación y auditoría, persistencia en base de datos del servidor y asistente de voz en español.
 
 - **Subdominio de producción:** [https://desguace.cochecierto.com/](https://desguace.cochecierto.com/)
+- **Centro Operativo CAT:** [https://desguace.cochecierto.com/operaciones.html](https://desguace.cochecierto.com/operaciones.html) (requiere autenticación)
+- **Portal de Acceso:** [https://desguace.cochecierto.com/login.html](https://desguace.cochecierto.com/login.html)
+- **Endpoint de Salud y Versión:** [https://desguace.cochecierto.com/api/version.php](https://desguace.cochecierto.com/api/version.php)
 - **Repositorio GitHub:** [https://github.com/cochecierto/desguace](https://github.com/cochecierto/desguace)
 
 ---
 
-## 1. Ejecución en Local
+## 1. Credenciales de Acceso CAT
 
-Puedes ejecutarlo en Windows con el script directo:
+El panel privado cuenta con control de sesiones y protección de datos conforme a RGPD:
+
+- **Usuario:** `admin@desguace.com`
+- **Contraseña inicial:** `Desguace2026!`
+- **Rol:** Gerente / Operador de Desguace
+
+Cualquier intento de acceso a datos sin sesión activa es bloqueado por el servidor con código HTTP 401 Unauthorized.
+
+---
+
+## 2. Ejecución en Local
+
+Ejecuta el lanzador automático en Windows:
 
 ```bat
 iniciar_desguace.bat
 ```
 
-O mediante cualquier terminal con Python:
+O inicia el servidor PHP integrado desde tu terminal:
 
 ```bash
-python -m http.server 8080
+php -S localhost:8000
 ```
 
-Y abrir en tu navegador: [http://localhost:8080](http://localhost:8080)
+Y abre en tu navegador:
+- Web pública de captación: [http://localhost:8000](http://localhost:8000)
+- Acceso CAT: [http://localhost:8000/login.html](http://localhost:8000/login.html)
+- Comprobación de API: [http://localhost:8000/api/version.php](http://localhost:8000/api/version.php)
 
 ---
 
-## 2. Despliegue en GitHub
+## 3. Arquitectura del Sistema
 
-El repositorio está vinculado a `https://github.com/cochecierto/desguace.git`.
-
-Para enviar los cambios a GitHub:
-
-```bash
-git add .
-git commit -m "feat: configuracion de produccion para desguace.cochecierto.com y despliegue Hostinger"
-git push origin main
+```
+desguace/
+├── index.html               # Web comercial pública (embudo de solicitud de recambios)
+├── public.js                # Lógica web pública (envía solicitudes a /api/requests.php)
+├── styles-public.css        # Estilos responsivos de la web pública
+├── login.html               # Pantalla de inicio de sesión seguro del personal CAT
+├── operaciones.html         # Centro de control privado (solicitudes, KPIs, inventario, modales)
+├── app.js                   # Lógica del panel CAT, conexión con API, Web Speech API y auditoría
+├── styles.css               # Estilos del panel operativo y modales
+├── .htaccess                # Configuración Apache Hostinger, HTTPS y bloqueo de archivos de datos
+│
+├── api/                     # Backend REST en PHP nativo (cero dependencias externas)
+│   ├── config.php           # Configuración global, zona horaria Madrid y sesiones seguras
+│   ├── db.php               # Motor de persistencia transaccional con bloqueo atómico (flock)
+│   ├── auth.php             # Controlador de autenticación (login, logout, check)
+│   ├── requests.php         # CRUD de solicitudes, filtros, estados y auditoría
+│   ├── stats.php            # Cálculo de KPIs reales en tiempo real (conversión, stock, tiempos)
+│   ├── inventory.php        # Alta y buscador interactivo de piezas en stock
+│   ├── vehicles.php         # Registro de vehículos en campa y bajas DGT
+│   ├── version.php          # Comprobación de salud, versión y coincidencia con main
+│   └── data/                # Almacenamiento seguro persistente (protegido por .htaccess)
+│       └── .htaccess        # Bloqueo total (Require all denied / Deny from all)
+│
+├── deploy_hostinger.py      # Script de despliegue FTP a Hostinger con creación de carpetas
+└── .github/workflows/
+    └── deploy.yml           # CI/CD automático de GitHub Actions a Hostinger
 ```
 
 ---
 
-## 3. Despliegue en Hostinger (`desguace.cochecierto.com`)
+## 4. Despliegue en Hostinger (`desguace.cochecierto.com`)
 
-### Opción A: Despliegue automático con GitHub Actions (Recomendado)
-El archivo `.github/workflows/deploy.yml` sube automáticamente los archivos estáticos a Hostinger por FTP en cada `git push` a la rama `main`.
+### Opción A: Despliegue automático vía GitHub Actions (Recomendado)
+Cada `git push` a la rama `main` despliega automáticamente por FTP a Hostinger.
 
-Solo necesitas configurar 3 secretos en tu repositorio de GitHub (**Settings > Secrets and variables > Actions**):
-- `HOSTINGER_FTP_HOST`: Servidor FTP de Hostinger (ej: `ftp.cochecierto.com` o la IP de tu cuenta).
-- `HOSTINGER_FTP_USER`: Tu usuario FTP de Hostinger.
-- `HOSTINGER_FTP_PASSWORD`: Tu contraseña FTP de Hostinger.
-- `HOSTINGER_FTP_DIR` *(opcional)*: Directorio del subdominio en Hostinger (por defecto `public_html/desguace` o `domains/desguace.cochecierto.com/public_html`).
+Configura los siguientes secretos en tu repositorio GitHub (**Settings > Secrets and variables > Actions**):
+- `HOSTINGER_FTP_HOST`: Servidor FTP (ej. `ftp.cochecierto.com` o la IP de tu cuenta).
+- `HOSTINGER_FTP_USER`: Usuario FTP de Hostinger.
+- `HOSTINGER_FTP_PASSWORD`: Contraseña FTP de Hostinger.
+- `HOSTINGER_FTP_DIR` *(opcional)*: Directorio del subdominio (por defecto `public_html/desguace/`).
 
-### Opción B: Despliegue directo por script Python
-Puedes desplegar directamente desde tu máquina ejecutando:
+> [!NOTE]
+> El workflow excluye automáticamente los archivos de datos (`api/data/*.json`, `api/data/*.sqlite`) para garantizar que un nuevo despliegue de código **nunca sobrescriba las solicitudes de clientes ni los datos de producción**.
 
+### Opción B: Despliegue manual por script Python
 ```bash
 python deploy_hostinger.py --host ftp.cochecierto.com --user tu_usuario --dir public_html/desguace
 ```
 
-### Configuración del Subdominio en el hPanel de Hostinger:
-1. Entra a tu **hPanel de Hostinger**.
-2. Ve a **Sitios web > Dominios > Subdominios**.
-3. Crea el subdominio `desguace` bajo el dominio `cochecierto.com`.
-4. Define la carpeta raíz personalizada (ejemplo: `public_html/desguace` o `domains/desguace.cochecierto.com/public_html`).
-5. Asegúrate de activar el certificado SSL gratuito para el subdominio en la sección **Seguridad > SSL**.
-
----
-
-## Estructura del Proyecto
-
-- `index.html`: Web comercial pública del desguace (embudo de solicitud de piezas, catálogo tipo marketplace, bajas y retiradas).
-- `styles-public.css`: Estilos de la web comercial pública.
-- `public.js`: Interacción, validación de formularios y almacenamiento local de solicitudes entrantes.
-- `operaciones.html`: Centro privado de operaciones CAT para el equipo (bandeja inteligente, asistente de voz, inventario y vehículos).
-- `styles.css`: Estilos visuales del centro de operaciones.
-- `app.js`: Lógica del panel de operaciones, gestión de estados y Web Speech API en español (`es-ES`).
-- `.htaccess`: Configuración del servidor Apache para Hostinger (HTTPS, UTF-8 y caché).
-- `iniciar_desguace.bat`: Lanzador directo para Windows.
-- `deploy_hostinger.py`: Script de despliegue FTP autónomo.
-- `.github/workflows/deploy.yml`: Automatización de CI/CD para Hostinger.
-
-# Arquitectura de producto
-
-El proyecto separa deliberadamente dos experiencias:
-
-- `index.html`: Web pública del desguace accesible para clientes finales en `https://desguace.cochecierto.com/`. Recoge la oportunidad y la necesidad técnica del cliente.
-- `operaciones.html`: Centro privado de operaciones para el personal del CAT en `https://desguace.cochecierto.com/operaciones.html`. Clasifica las solicitudes, permite gestionar el ciclo de vida y activar el asistente de voz.
-
-La web pública recoge la oportunidad; el SaaS interno la clasifica y la entrega a una persona para confirmar disponibilidad, precio, ubicación y entrega. Sin precios inventados ni compra automática.
+### Verificación posterior al despliegue
+Tras desplegar, visita:
+`https://desguace.cochecierto.com/api/version.php`
+Comprueba que devuelve `status: "operational"`, versión y fecha actual, confirmando que la web en producción está 100% sincronizada con `main`.

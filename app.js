@@ -1,54 +1,62 @@
 // Panel de Operaciones CAT (operaciones.html) - DESGUACE
-const SEED_REQUESTS = [
-  {
-    id: 'REQ-101',
-    part: 'Alternador',
-    vehicle: 'Renault Laguna · 1.9 dCi · 2007',
-    person: 'María García',
-    phone: '612 345 890',
-    channel: 'WhatsApp',
-    time: 'hace 8 min',
-    status: 'Nueva',
-    action: 'Validar referencia',
-    tagColor: 'orange'
-  },
-  {
-    id: 'REQ-102',
-    part: 'Retirada y baja definitiva',
-    vehicle: 'Seat Ibiza · 1.4 TDI · 2009',
-    person: 'Javier R.',
-    phone: '644 112 233',
-    channel: 'Teléfono',
-    time: 'hace 24 min',
-    status: 'Documentación',
-    action: 'Solicitar documentos',
-    tagColor: 'blue'
-  },
-  {
-    id: 'REQ-103',
-    part: 'Motor completo (ref: CAYC)',
-    vehicle: 'Volkswagen Golf VI · 2013',
-    person: 'Taller Novo',
-    phone: '988 223 344',
-    channel: 'Web pública',
-    time: 'ayer',
-    status: 'En curso',
-    action: 'Responder precio',
-    tagColor: 'green'
-  }
-];
+// Integración con backend PHP, persistencia real, control de sesión y auditoría
 
-document.addEventListener('DOMContentLoaded', () => {
-  // 1. Elementos principales
-  const dialog = document.querySelector('#assistant');
+document.addEventListener('DOMContentLoaded', async () => {
+  // 1. Verificación de autenticación de sesión
+  let currentUser = null;
+  try {
+    const authRes = await fetch('api/auth.php?action=check');
+    const authData = await authRes.json();
+    if (!authData.authenticated || !authData.user) {
+      window.location.href = 'login.html?redirect=operaciones.html';
+      return;
+    }
+    currentUser = authData.user;
+    renderUserInfo(currentUser);
+  } catch (err) {
+    console.warn('Error comprobando sesión con el servidor:', err);
+    window.location.href = 'login.html?redirect=operaciones.html';
+    return;
+  }
+
+  // 2. Elementos DOM principales
+  const dialogAssistant = document.querySelector('#assistant');
+  const modalReqDetail = document.querySelector('#modalRequestDetail');
+  const modalVehiculo = document.querySelector('#modalVehiculo');
+  const modalPieza = document.querySelector('#modalPieza');
+  const modalBaja = document.querySelector('#modalBaja');
+  const modalBuscarInv = document.querySelector('#modalBuscarInv');
+
   const sidebar = document.querySelector('.side');
   const hamb = document.querySelector('#hamb');
+  const logoutBtn = document.querySelector('#logoutBtn');
+  const currentDateEl = document.querySelector('#currentDate');
+  const systemStatusBadge = document.querySelector('#systemStatusBadge');
+
   const requestsContainer = document.querySelector('#requestsContainer');
   const badgeCount = document.querySelector('#badgeCount');
   const heroSummary = document.querySelector('#heroSummary');
-  const resetBtn = document.querySelector('#resetDataBtn');
+  const filterStatus = document.querySelector('#filterStatus');
+  const refreshRequestsBtn = document.querySelector('#refreshRequestsBtn');
 
-  // 2. Control de navegación y sidebar
+  // KPIs
+  const kpiMonthCount = document.querySelector('#kpiMonthCount');
+  const kpiConversion = document.querySelector('#kpiConversion');
+  const kpiTotalParts = document.querySelector('#kpiTotalParts');
+  const kpiLocatedPercent = document.querySelector('#kpiLocatedPercent');
+  const kpiVehiclesInProcess = document.querySelector('#kpiVehiclesInProcess');
+  const inventoryPreviewContainer = document.querySelector('#inventoryPreviewContainer');
+  const vehiclesPreviewContainer = document.querySelector('#vehiclesPreviewContainer');
+  const assistantProgressBar = document.querySelector('#assistantProgressBar');
+  const assistantProgressPercent = document.querySelector('#assistantProgressPercent');
+
+  // 3. Renderizado de fecha dinámica en español
+  renderDynamicDate();
+
+  // 4. Verificación de salud y versión del sistema
+  checkSystemVersion();
+
+  // 5. Navegación móvil y logout
   if (hamb && sidebar) {
     hamb.addEventListener('click', () => sidebar.classList.toggle('open'));
   }
@@ -56,62 +64,160 @@ document.addEventListener('DOMContentLoaded', () => {
     a.addEventListener('click', () => sidebar?.classList.remove('open'));
   });
 
+  if (logoutBtn) {
+    logoutBtn.addEventListener('click', async () => {
+      if (confirm('¿Deseas cerrar la sesión operativa en el CAT?')) {
+        try {
+          await fetch('api/auth.php?action=logout', { method: 'POST' });
+        } catch (e) {}
+        window.location.href = 'login.html';
+      }
+    });
+  }
+
   // Atajos de teclado
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
       sidebar?.classList.remove('open');
-      if (dialog?.open) dialog.close();
+      document.querySelectorAll('dialog[open]').forEach(d => d.close());
     }
-    if (e.key.toLowerCase() === 'v' && !dialog?.open && document.activeElement.tagName !== 'TEXTAREA' && document.activeElement.tagName !== 'INPUT') {
-      dialog?.showModal();
+    if (e.key.toLowerCase() === 'v' && !isAnyModalOpen() && !isFormInputActive()) {
+      dialogAssistant?.showModal();
+      resetVoiceUI();
     }
   });
 
-  // 3. Inicializar y cargar solicitudes
-  function getStoredRequests() {
+  // 6. Carga inicial de datos
+  await loadRequests();
+  await loadStats();
+  await loadInventoryPreview();
+  await loadVehiclesPreview();
+
+  // Recarga periódica inteligente (cada 30 segundos)
+  setInterval(() => {
+    loadRequests(false);
+    loadStats();
+  }, 30000);
+
+  // 7. Control de filtros y actualización
+  if (filterStatus) {
+    filterStatus.addEventListener('change', () => loadRequests());
+  }
+  if (refreshRequestsBtn) {
+    refreshRequestsBtn.addEventListener('click', () => {
+      refreshRequestsBtn.textContent = 'Cargando…';
+      Promise.all([loadRequests(), loadStats()]).finally(() => {
+        refreshRequestsBtn.textContent = '↻ Actualizar';
+      });
+    });
+  }
+
+  // ==========================================
+  // FUNCIONES DE CARGA Y API
+  // ==========================================
+
+  async function renderUserInfo(user) {
+    const avatar = document.querySelector('#userAvatar');
+    const nameEl = document.querySelector('#userDisplayName');
+    const roleEl = document.querySelector('#userRole');
+    const greetingEl = document.querySelector('#userGreeting');
+
+    if (nameEl) nameEl.textContent = user.name;
+    if (roleEl) roleEl.textContent = user.role || 'Operador CAT';
+    if (avatar) {
+      const initials = user.name.split(' ').map(w => w[0]).join('').substring(0, 2).toUpperCase();
+      avatar.textContent = initials || 'JG';
+    }
+    if (greetingEl) {
+      const firstName = user.name.split(' ')[0];
+      const hour = new Date().getHours();
+      const salut = hour < 14 ? 'Buenos días' : (hour < 21 ? 'Buenas tardes' : 'Buenas noches');
+      greetingEl.innerHTML = `${salut}, ${escapeHtml(firstName)} <span>↗</span>`;
+    }
+  }
+
+  function renderDynamicDate() {
+    if (!currentDateEl) return;
+    const now = new Date();
+    const formatter = new Intl.DateTimeFormat('es-ES', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+    currentDateEl.textContent = formatter.format(now).toUpperCase();
+  }
+
+  async function checkSystemVersion() {
+    if (!systemStatusBadge) return;
     try {
-      const data = localStorage.getItem('desguace_solicitudes');
-      if (data) {
-        const parsed = JSON.parse(data);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      const res = await fetch('api/version.php');
+      const data = await res.json();
+      if (data.status === 'operational') {
+        systemStatusBadge.innerHTML = `● Base de datos activa · v${data.version} (${data.branch})`;
+        systemStatusBadge.style.color = '#75817d';
+      }
+    } catch (e) {
+      systemStatusBadge.innerHTML = `⚠ Sin conexión con la API`;
+      systemStatusBadge.style.color = '#e05252';
+    }
+  }
+
+  async function loadRequests(showLoading = true) {
+    if (showLoading && requestsContainer) {
+      requestsContainer.style.opacity = '0.6';
+    }
+
+    try {
+      const statusVal = filterStatus ? filterStatus.value : 'all';
+      const url = statusVal === 'all' ? 'api/requests.php' : `api/requests.php?status=${encodeURIComponent(statusVal)}`;
+      const res = await fetch(url);
+
+      if (res.status === 401) {
+        window.location.href = 'login.html?redirect=operaciones.html';
+        return;
+      }
+
+      const data = await res.json();
+      if (data.success && Array.isArray(data.data)) {
+        renderRequestsList(data.data);
       }
     } catch (err) {
-      console.warn('Error leyendo de localStorage:', err);
+      console.warn('Error cargando solicitudes:', err);
+    } finally {
+      if (requestsContainer) requestsContainer.style.opacity = '1';
     }
-    // Guardar semillas iniciales
-    localStorage.setItem('desguace_solicitudes', JSON.stringify(SEED_REQUESTS));
-    return [...SEED_REQUESTS];
   }
 
-  function saveRequests(list) {
-    localStorage.setItem('desguace_solicitudes', JSON.stringify(list));
-    renderRequests(list);
-  }
-
-  function renderRequests(list) {
+  function renderRequestsList(list) {
     if (!requestsContainer) return;
+
+    const pendingList = list.filter(r => ['nueva', 'en_estudio', 'presupuestada', 'contactada'].includes(r.status));
+    if (badgeCount) badgeCount.textContent = pendingList.length;
+
+    if (heroSummary) {
+      if (pendingList.length === 0) {
+        heroSummary.innerHTML = `Todas las solicitudes están atendidas. El centro CAT está al día.`;
+      } else {
+        heroSummary.innerHTML = `<strong>${pendingList.length} solicitudes</strong> esperan acción en el centro CAT. Pulsa cualquier solicitud para ver la ficha y gestionar el estado.`;
+      }
+    }
 
     if (list.length === 0) {
       requestsContainer.innerHTML = `
-        <div style="padding:24px;text-align:center;color:#666;border:1px dashed #ddd;border-radius:12px;grid-column:1/-1;">
-          No hay solicitudes pendientes en este momento. Las nuevas consultas aparecerán aquí automáticamente.
+        <div style="padding:32px;text-align:center;color:#666;border:1px dashed var(--line);border-radius:8px;margin-top:10px;">
+          No hay solicitudes registradas con el filtro actual.
         </div>`;
-      if (badgeCount) badgeCount.textContent = '0';
-      if (heroSummary) heroSummary.textContent = 'Todas las solicitudes están atendidas.';
       return;
     }
 
-    if (badgeCount) badgeCount.textContent = list.length;
-    if (heroSummary) {
-      heroSummary.innerHTML = `<strong>${list.length} solicitudes</strong> en bandeja. El asistente clasifica y prepara las fichas para validación del equipo.`;
-    }
-
-    requestsContainer.innerHTML = list.map((item, index) => {
+    requestsContainer.innerHTML = list.map(item => {
       const iconLetter = (item.part || 'P').charAt(0).toUpperCase();
       const tagColor = item.tagColor || 'orange';
+      const timeAgo = formatTimeAgo(item.created_at);
 
       return `
-        <article data-index="${index}" style="cursor:pointer;" title="Clic para avanzar estado">
+        <article data-id="${escapeHtml(item.id)}" style="cursor:pointer;" title="Ver ficha de solicitud y auditoría">
           <span class="icon ${tagColor}">${iconLetter}</span>
           <div>
             <strong>${escapeHtml(item.part)}</strong>
@@ -119,79 +225,454 @@ document.addEventListener('DOMContentLoaded', () => {
           </div>
           <div class="person">
             <strong>${escapeHtml(item.person || 'Cliente')}</strong>
-            <small>${escapeHtml(item.channel || 'Canal directo')} · ${escapeHtml(item.time || 'Reciente')}</small>
+            <small>${escapeHtml(item.channel || 'Canal directo')} · ${timeAgo}</small>
             ${item.phone ? `<small style="color:#008060;font-weight:600;">📞 ${escapeHtml(item.phone)}</small>` : ''}
           </div>
           <label class="tag ${tagColor}">${escapeHtml(item.action || 'Validar')}</label>
-          <button class="arrow" type="button" aria-label="Avanzar acción">→</button>
+          <button class="arrow" type="button" aria-label="Abrir ficha">→</button>
         </article>
       `;
     }).join('');
 
-    // Listener para avanzar estados al hacer clic
+    // Listener al hacer clic en cualquier fila de solicitud para abrir el modal de gestión y auditoría
     requestsContainer.querySelectorAll('article').forEach(art => {
       art.addEventListener('click', () => {
-        const idx = parseInt(art.getAttribute('data-index'), 10);
-        advanceRequestState(idx);
+        const reqId = art.getAttribute('data-id');
+        openRequestDetailModal(reqId);
       });
     });
   }
 
-  function advanceRequestState(index) {
-    const list = getStoredRequests();
-    if (!list[index]) return;
+  async function loadStats() {
+    try {
+      const res = await fetch('api/stats.php');
+      if (res.status === 401) return;
+      const data = await res.json();
+      if (data.success && data.kpis) {
+        const kpis = data.kpis;
+        if (kpiMonthCount) kpiMonthCount.textContent = kpis.this_month_requests;
+        if (kpiConversion) kpiConversion.innerHTML = `${kpis.conversion_rate}<sup>%</sup>`;
+        if (kpiTotalParts) kpiTotalParts.textContent = kpis.total_parts;
+        if (kpiLocatedPercent) kpiLocatedPercent.textContent = `${kpis.located_percentage}%`;
+        if (kpiVehiclesInProcess) kpiVehiclesInProcess.textContent = kpis.vehicles_in_process;
 
-    const currentAction = list[index].action;
-    if (currentAction.includes('Validar')) {
-      list[index].action = 'Responder precio y stock';
-      list[index].tagColor = 'green';
-    } else if (currentAction.includes('Responder') || currentAction.includes('precio')) {
-      list[index].action = 'Contactar cliente';
-      list[index].tagColor = 'blue';
-    } else if (currentAction.includes('Contactar') || currentAction.includes('documentos')) {
-      list[index].action = '✓ Confirmada y cerrada';
-      list[index].tagColor = 'gray';
-    } else {
-      // Si ya está cerrada, volver a ponerla en validar
-      list[index].action = 'Validar referencia';
-      list[index].tagColor = 'orange';
+        // Ajustar porcentaje del asistente según solicitudes resueltas
+        if (assistantProgressBar && assistantProgressPercent) {
+          const total = kpis.total_requests || 1;
+          const pending = kpis.pending_requests || 0;
+          const resolvedRate = Math.min(95, Math.max(65, Math.round(((total - pending) / total) * 100)));
+          assistantProgressBar.style.width = `${resolvedRate}%`;
+          assistantProgressPercent.textContent = `${resolvedRate}%`;
+        }
+
+        // Renderizar barras dinámicas en la gráfica de actividad
+        if (kpis.daily_activity && Array.isArray(kpis.daily_activity)) {
+          const chartBars = document.querySelector('#chartBars');
+          if (chartBars) {
+            chartBars.innerHTML = kpis.daily_activity.map((act, i) => {
+              const h = Math.min(100, Math.max(25, act.count * 20));
+              const isHighlight = i === kpis.daily_activity.length - 1;
+              return `<i style="height:${h}%;${isHighlight ? 'background:var(--lime);' : ''}"></i>`;
+            }).join('');
+          }
+        }
+      }
+    } catch (err) {
+      console.warn('Error cargando estadísticas:', err);
     }
-    saveRequests(list);
   }
 
-  // Restablecer datos de prueba
-  if (resetBtn) {
-    resetBtn.addEventListener('click', () => {
-      if (confirm('¿Restablecer solicitudes iniciales de demostración?')) {
-        localStorage.setItem('desguace_solicitudes', JSON.stringify(SEED_REQUESTS));
-        renderRequests(SEED_REQUESTS);
+  async function loadInventoryPreview() {
+    if (!inventoryPreviewContainer) return;
+    try {
+      const res = await fetch('api/inventory.php');
+      const data = await res.json();
+      if (data.success && Array.isArray(data.data)) {
+        const slice = data.data.slice(0, 3);
+        if (slice.length === 0) {
+          inventoryPreviewContainer.innerHTML = '<p>No hay piezas en stock catalogadas.</p>';
+          return;
+        }
+        inventoryPreviewContainer.innerHTML = slice.map(p => `
+          <p>
+            ${escapeHtml(p.name)}
+            <span>${escapeHtml(p.vehicle)} · Ubicación: <strong>${escapeHtml(p.location || 'Pendiente')}</strong></span>
+            <b>${p.price > 0 ? p.price.toFixed(2) + '€' : 'A consultar'}</b>
+          </p>
+        `).join('');
+      }
+    } catch (e) {
+      console.warn('Error cargando inventario preview:', e);
+    }
+  }
+
+  async function loadVehiclesPreview() {
+    if (!vehiclesPreviewContainer) return;
+    try {
+      const res = await fetch('api/vehicles.php');
+      const data = await res.json();
+      if (data.success && Array.isArray(data.data)) {
+        const slice = data.data.slice(0, 3);
+        if (slice.length === 0) {
+          vehiclesPreviewContainer.innerHTML = '<li><b>No hay vehículos en proceso actualmente.</b></li>';
+          return;
+        }
+        vehiclesPreviewContainer.innerHTML = slice.map(v => `
+          <li>
+            <b>${escapeHtml(v.plate)} · ${escapeHtml(v.make_model)}</b>
+            <small>${escapeHtml(v.status)} · DGT: ${escapeHtml(v.baja_dgt)}</small>
+          </li>
+        `).join('');
+      }
+    } catch (e) {
+      console.warn('Error cargando vehículos preview:', e);
+    }
+  }
+
+  // ==========================================
+  // MODAL DE DETALLE DE SOLICITUD Y AUDITORÍA
+  // ==========================================
+
+  async function openRequestDetailModal(requestId) {
+    if (!modalReqDetail) return;
+
+    try {
+      const res = await fetch(`api/requests.php?id=${encodeURIComponent(requestId)}`);
+      const data = await res.json();
+      if (!data.success || !data.data) {
+        alert('No se encontró la solicitud.');
+        return;
+      }
+
+      const req = data.data;
+      const audit = data.audit || [];
+
+      document.querySelector('#editRequestId').value = req.id;
+      document.querySelector('#modalReqTitle').textContent = `Solicitud ${req.id}`;
+      document.querySelector('#modalReqSubtitle').textContent = `${req.channel || 'Canal directo'} · ${formatTimeAgo(req.created_at)}`;
+
+      document.querySelector('#detailPartVehicle').innerHTML = `
+        ${escapeHtml(req.part)}<br>
+        <span style="font-weight:400;color:var(--muted);font-size:12px;">${escapeHtml(req.vehicle || 'Sin vehículo')}</span>
+      `;
+
+      const contactActionsEl = document.querySelector('#detailContactActions');
+      let cleanPhone = (req.phone || '').replace(/[^0-9+]/g, '');
+      let waLink = '';
+      if (cleanPhone) {
+        const waPhone = cleanPhone.startsWith('+') ? cleanPhone.substring(1) : (cleanPhone.startsWith('34') ? cleanPhone : '34' + cleanPhone);
+        const waMsg = encodeURIComponent(`Hola ${req.person || ''}, te contactamos desde el Centro de Recambios CAT respecto a tu consulta de ${req.part} para ${req.vehicle || ''}.`);
+        waLink = `https://wa.me/${waPhone}?text=${waMsg}`;
+      }
+
+      document.querySelector('#detailPersonChannel').innerHTML = `
+        ${escapeHtml(req.person || 'Cliente')} (${escapeHtml(req.phone || 'Sin teléfono')})
+      `;
+
+      if (contactActionsEl) {
+        contactActionsEl.innerHTML = `
+          ${cleanPhone ? `<a href="tel:${cleanPhone}">📞 Llamar</a>` : ''}
+          ${waLink ? `<a href="${waLink}" target="_blank" rel="noopener" class="wa">💬 WhatsApp</a>` : ''}
+        `;
+      }
+
+      // Estado y notas
+      const editStatus = document.querySelector('#editStatus');
+      if (editStatus) editStatus.value = req.status || 'nueva';
+
+      const editNotes = document.querySelector('#editNotes');
+      if (editNotes) editNotes.value = req.notes || '';
+
+      const editPriceQuote = document.querySelector('#editPriceQuote');
+      if (editPriceQuote) editPriceQuote.value = req.price_quote || '';
+
+      // Renderizar historial de auditoría
+      const auditContainer = document.querySelector('#auditLogContainer');
+      if (auditContainer) {
+        if (audit.length === 0) {
+          auditContainer.innerHTML = '<div style="font-size:11px;color:#999;padding:6px 0;">Sin eventos previos registrados.</div>';
+        } else {
+          auditContainer.innerHTML = audit.map(a => {
+            const dateStr = formatDateTime(a.created_at);
+            return `
+              <div class="audit-item">
+                <small>${dateStr}</small>
+                <strong>${escapeHtml(a.user_name || 'Sistema')}</strong>: ${escapeHtml(a.details || a.action)}
+              </div>
+            `;
+          }).join('');
+        }
+      }
+
+      modalReqDetail.showModal();
+    } catch (err) {
+      console.warn('Error abriendo modal de detalle:', err);
+      alert('Error al obtener los detalles de la solicitud.');
+    }
+  }
+
+  const closeReqDetailBtn = document.querySelector('#closeReqDetail');
+  if (closeReqDetailBtn) closeReqDetailBtn.addEventListener('click', () => modalReqDetail?.close());
+
+  const formUpdateState = document.querySelector('#formUpdateState');
+  if (formUpdateState) {
+    formUpdateState.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const reqId = document.querySelector('#editRequestId').value;
+      const status = document.querySelector('#editStatus').value;
+      const notes = document.querySelector('#editNotes').value;
+      const priceQuote = document.querySelector('#editPriceQuote').value;
+      const btn = document.querySelector('#btnSaveReqUpdate');
+
+      if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = 'Guardando…';
+      }
+
+      try {
+        const res = await fetch('api/requests.php', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            id: reqId,
+            status: status,
+            notes: notes,
+            price_quote: priceQuote,
+            comment: `Estado: ${status}`
+          })
+        });
+
+        const data = await res.json();
+        if (res.ok && data.success) {
+          modalReqDetail?.close();
+          await loadRequests();
+          await loadStats();
+        } else {
+          alert(data.error || 'No se pudo actualizar la solicitud.');
+        }
+      } catch (err) {
+        console.warn('Error guardando cambios:', err);
+        alert('Error de conexión al guardar los cambios.');
+      } finally {
+        if (btn) {
+          btn.disabled = false;
+          btn.innerHTML = 'Guardar y registrar auditoría <span>→</span>';
+        }
       }
     });
   }
 
-  // Carga inicial
-  let currentRequests = getStoredRequests();
-  renderRequests(currentRequests);
+  // ==========================================
+  // MODALES DE ACCIÓN RÁPIDA (VEHÍCULO, PIEZA, BAJA, BÚSQUEDA)
+  // ==========================================
 
-  // Sincronización en tiempo real entre pestañas (StorageEvent)
-  window.addEventListener('storage', (e) => {
-    if (e.key === 'desguace_solicitudes') {
-      currentRequests = getStoredRequests();
-      renderRequests(currentRequests);
+  // 1. Registrar Vehículo
+  const btnRegVehiculo = document.querySelector('#btnRegVehiculo');
+  const closeVehiculo = document.querySelector('#closeVehiculo');
+  const formVehiculo = document.querySelector('#formVehiculo');
+
+  if (btnRegVehiculo) btnRegVehiculo.addEventListener('click', () => modalVehiculo?.showModal());
+  if (closeVehiculo) closeVehiculo.addEventListener('click', () => modalVehiculo?.close());
+
+  if (formVehiculo) {
+    formVehiculo.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const plate = document.querySelector('#vehPlate').value.trim();
+      const year = document.querySelector('#vehYear').value;
+      const makeModel = document.querySelector('#vehMakeModel').value.trim();
+      const status = document.querySelector('#vehStatus').value;
+      const bajaDgt = document.querySelector('#vehBaja').value;
+      const notes = document.querySelector('#vehNotes').value.trim();
+
+      try {
+        const res = await fetch('api/vehicles.php', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            plate, year, make_model: makeModel, status, baja_dgt: bajaDgt, notes
+          })
+        });
+        const data = await res.json();
+        if (res.ok && data.success) {
+          alert(`✓ Vehículo ${plate} registrado con éxito en el centro CAT.`);
+          formVehiculo.reset();
+          modalVehiculo?.close();
+          await loadVehiclesPreview();
+          await loadStats();
+        } else {
+          alert(data.error || 'Error al guardar el vehículo.');
+        }
+      } catch (err) {
+        alert('Error de conexión al registrar vehículo.');
+      }
+    });
+  }
+
+  // 2. Dar de alta una pieza
+  const btnAltaPieza = document.querySelector('#btnAltaPieza');
+  const closePieza = document.querySelector('#closePieza');
+  const formPieza = document.querySelector('#formPieza');
+
+  if (btnAltaPieza) btnAltaPieza.addEventListener('click', () => modalPieza?.showModal());
+  if (closePieza) closePieza.addEventListener('click', () => modalPieza?.close());
+
+  if (formPieza) {
+    formPieza.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const name = document.querySelector('#partName').value.trim();
+      const vehicle = document.querySelector('#partVehicle').value.trim();
+      const category = document.querySelector('#partCategory').value;
+      const price = parseFloat(document.querySelector('#partPrice').value) || 0;
+      const location = document.querySelector('#partLocation').value.trim();
+
+      try {
+        const res = await fetch('api/inventory.php', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, vehicle, category, price, location })
+        });
+        const data = await res.json();
+        if (res.ok && data.success) {
+          alert(`✓ Pieza "${name}" catalogada en el inventario (${location}).`);
+          formPieza.reset();
+          modalPieza?.close();
+          await loadInventoryPreview();
+          await loadStats();
+        } else {
+          alert(data.error || 'Error al catalogar pieza.');
+        }
+      } catch (err) {
+        alert('Error de conexión al catalogar pieza.');
+      }
+    });
+  }
+
+  // 3. Crear expediente de baja
+  const btnExpBaja = document.querySelector('#btnExpBaja');
+  const closeBaja = document.querySelector('#closeBaja');
+  const formBaja = document.querySelector('#formBaja');
+
+  if (btnExpBaja) btnExpBaja.addEventListener('click', () => modalBaja?.showModal());
+  if (closeBaja) closeBaja.addEventListener('click', () => modalBaja?.close());
+
+  if (formBaja) {
+    formBaja.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const plate = document.querySelector('#bajaPlate').value.trim();
+      const dni = document.querySelector('#bajaDni').value.trim();
+      const owner = document.querySelector('#bajaOwner').value.trim();
+      const phone = document.querySelector('#bajaPhone').value.trim();
+      const location = document.querySelector('#bajaLocation').value.trim();
+
+      try {
+        // Guardar como solicitud prioritaria en requests
+        const res = await fetch('api/requests.php', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            part: 'Baja definitiva DGT y retirada CAT',
+            vehicle: `Matrícula: ${plate}`,
+            person: `${owner} (DNI: ${dni})`,
+            phone: phone,
+            channel: 'Expediente Interno CAT',
+            notes: `Ubicación grúa: ${location || 'Por confirmar'}`
+          })
+        });
+
+        const data = await res.json();
+        if (res.ok && data.success) {
+          alert(`✓ Expediente de baja creado para el vehículo ${plate}.`);
+          formBaja.reset();
+          modalBaja?.close();
+          await loadRequests();
+          await loadStats();
+        } else {
+          alert(data.error || 'Error al crear expediente de baja.');
+        }
+      } catch (err) {
+        alert('Error de conexión al tramitar expediente.');
+      }
+    });
+  }
+
+  // 4. Buscador en tiempo real de inventario
+  const btnBuscarInv = document.querySelector('#btnBuscarInv');
+  const btnSearchTopbar = document.querySelector('#btnSearchTopbar');
+  const btnOpenSearchInv = document.querySelector('#btnOpenSearchInv');
+  const closeBuscarInv = document.querySelector('#closeBuscarInv');
+  const btnCloseSearchModal = document.querySelector('#btnCloseSearchModal');
+  const invSearchInput = document.querySelector('#invSearchInput');
+  const invSearchResults = document.querySelector('#invSearchResults');
+  const invResultsCount = document.querySelector('#invResultsCount');
+
+  const openSearchModal = () => {
+    modalBuscarInv?.showModal();
+    invSearchInput?.focus();
+    executeLiveSearch('');
+  };
+
+  if (btnBuscarInv) btnBuscarInv.addEventListener('click', openSearchModal);
+  if (btnSearchTopbar) btnSearchTopbar.addEventListener('click', openSearchModal);
+  if (btnOpenSearchInv) btnOpenSearchInv.addEventListener('click', openSearchModal);
+  if (closeBuscarInv) closeBuscarInv.addEventListener('click', () => modalBuscarInv?.close());
+  if (btnCloseSearchModal) btnCloseSearchModal.addEventListener('click', () => modalBuscarInv?.close());
+
+  let searchDebounce = null;
+  if (invSearchInput) {
+    invSearchInput.addEventListener('input', (e) => {
+      clearTimeout(searchDebounce);
+      searchDebounce = setTimeout(() => {
+        executeLiveSearch(e.target.value.trim());
+      }, 250);
+    });
+  }
+
+  async function executeLiveSearch(query) {
+    if (!invSearchResults) return;
+    invSearchResults.innerHTML = '<div style="padding:16px;text-align:center;color:#666;">Buscando…</div>';
+
+    try {
+      const res = await fetch(`api/inventory.php?search=${encodeURIComponent(query)}`);
+      const data = await res.json();
+      if (data.success && Array.isArray(data.data)) {
+        if (invResultsCount) invResultsCount.textContent = `${data.count} piezas encontradas`;
+        if (data.data.length === 0) {
+          invSearchResults.innerHTML = '<div style="padding:16px;text-align:center;color:#666;">No se encontraron piezas con ese término de búsqueda.</div>';
+          return;
+        }
+
+        invSearchResults.innerHTML = data.data.map(p => `
+          <div class="live-search-item">
+            <div>
+              <strong>${escapeHtml(p.name)}</strong>
+              <div style="font-size:11px;color:var(--muted);margin-top:2px;">${escapeHtml(p.vehicle)}</div>
+              <div style="font-size:10px;font-family:'DM Mono';color:#008060;margin-top:3px;">📍 ${escapeHtml(p.location || 'Sin ubicación')} · ${escapeHtml(p.category || 'General')}</div>
+            </div>
+            <div style="text-align:right;">
+              <strong style="font-size:14px;color:var(--ink);">${p.price > 0 ? p.price.toFixed(2) + '€' : 'Consultar'}</strong>
+              <div style="font-size:10px;font-family:'DM Mono';color:${p.status === 'Disponible' ? '#166534' : '#991b1b'};">${escapeHtml(p.status)}</div>
+            </div>
+          </div>
+        `).join('');
+      }
+    } catch (e) {
+      invSearchResults.innerHTML = '<div style="padding:16px;text-align:center;color:#e05252;">Error buscando en inventario.</div>';
     }
-  });
+  }
 
-  // 4. Modal de Asistente de Voz / Inteligente
+  // ==========================================
+  // ASISTENTE DE VOZ INTELIGENTE CONECTADO AL SERVIDOR
+  // ==========================================
+
   const openButtons = document.querySelectorAll('#openAssistant, #openAssistant2');
   openButtons.forEach(b => b?.addEventListener('click', () => {
-    dialog?.showModal();
+    dialogAssistant?.showModal();
     resetVoiceUI();
   }));
 
-  const closeBtn = document.querySelector('#close');
-  if (closeBtn) closeBtn.addEventListener('click', () => dialog?.close());
+  const closeAssistantBtn = document.querySelector('#close');
+  if (closeAssistantBtn) closeAssistantBtn.addEventListener('click', () => dialogAssistant?.close());
 
-  // Prompts rápidos de ejemplo
   document.querySelectorAll('.prompts button').forEach(btn => {
     btn.addEventListener('click', () => {
       const promptText = btn.getAttribute('data-prompt') || btn.textContent;
@@ -203,7 +684,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
-  // 5. Reconocimiento de Voz (Web Speech API es-ES con Fallback)
   const listenBtn = document.querySelector('#listen');
   const voiceText = document.querySelector('#voiceText');
   const voiceSub = document.querySelector('#voiceSub');
@@ -243,9 +723,7 @@ document.addEventListener('DOMContentLoaded', () => {
       for (let i = event.resultIndex; i < event.results.length; ++i) {
         transcript += event.results[i][0].transcript;
       }
-      if (reqTextarea) {
-        reqTextarea.value = transcript;
-      }
+      if (reqTextarea) reqTextarea.value = transcript;
     };
 
     recognition.onerror = (event) => {
@@ -275,7 +753,6 @@ document.addEventListener('DOMContentLoaded', () => {
           try {
             recognition.start();
           } catch (err) {
-            console.warn('Recognition start failed:', err);
             fallbackSpeechSimulation();
           }
         } else {
@@ -296,12 +773,12 @@ document.addEventListener('DOMContentLoaded', () => {
     if (voiceSub) voiceSub.textContent = 'Simulación activa (es-ES)';
 
     setTimeout(() => {
-      if (voiceText) voiceText.textContent = 'Solicitud recogida · lista para validar';
-      if (voiceSub) voiceSub.textContent = 'Transcripción completada con éxito';
+      if (voiceText) voiceText.textContent = 'Solicitud recogida · lista para guardar';
+      if (voiceSub) voiceSub.textContent = 'Transcripción asistida completada';
       if (reqTextarea && !reqTextarea.value.trim()) {
-        reqTextarea.value = 'Necesito un alternador para Renault Megane 1.5 dCi de 2011. Pregunta si tienen stock comprobado y precio con entrega.';
+        reqTextarea.value = 'Necesito un alternador para Renault Megane 1.5 dCi de 2011. Pregunta precio y disponibilidad con entrega rápida.';
       }
-      if (!voiceClientName?.value) voiceClientName.value = 'Taller Gómez';
+      if (!voiceClientName?.value) voiceClientName.value = 'Taller Mecánico';
       if (!voiceClientPhone?.value) voiceClientPhone.value = '620 998 877';
 
       if (listenBtn) {
@@ -312,31 +789,29 @@ document.addEventListener('DOMContentLoaded', () => {
         voiceDot.style.color = '#00a35c';
         voiceDot.textContent = '✓';
       }
-    }, 1400);
+    }, 1200);
   }
 
   function resetVoiceUI() {
     if (voiceText) voiceText.textContent = 'Listo para escuchar';
-    if (voiceSub) voiceSub.textContent = SpeechRecognition ? 'Web Speech API · Voz en español (es-ES)' : 'Modo asistido con simulación activa';
+    if (voiceSub) voiceSub.textContent = SpeechRecognition ? 'Web Speech API · Voz en español (es-ES)' : 'Modo asistido listo';
     if (voiceDot) {
       voiceDot.style.color = '#00a35c';
       voiceDot.textContent = '✦';
     }
   }
 
-  // 6. Guardar solicitud desde el asistente de voz en el panel
   if (saveVoiceBtn) {
-    saveVoiceBtn.addEventListener('click', () => {
+    saveVoiceBtn.addEventListener('click', async () => {
       const text = reqTextarea?.value.trim();
       const name = voiceClientName?.value.trim() || 'Cliente (Recepción Voz)';
-      const phone = voiceClientPhone?.value.trim() || '';
+      const phone = voiceClientPhone?.value.trim() || '600 000 000';
 
       if (!text) {
         alert('Por favor, graba o escribe los detalles de la solicitud.');
         return;
       }
 
-      // Extraer un título simple de la pieza
       let partTitle = 'Solicitud de recambio';
       if (text.toLowerCase().includes('alternador')) partTitle = 'Alternador';
       else if (text.toLowerCase().includes('faro') || text.toLowerCase().includes('piloto')) partTitle = 'Faro / Piloto';
@@ -344,50 +819,87 @@ document.addEventListener('DOMContentLoaded', () => {
       else if (text.toLowerCase().includes('caja')) partTitle = 'Caja de cambios';
       else if (text.toLowerCase().includes('baja') || text.toLowerCase().includes('retirada')) partTitle = 'Retirada y baja definitiva';
 
-      const newReq = {
-        id: 'VOZ-' + Math.floor(100 + Math.random() * 900),
-        part: partTitle,
-        vehicle: text.length > 50 ? text.substring(0, 50) + '…' : text,
-        person: name,
-        phone: phone,
-        channel: 'Asistente de Voz',
-        time: 'hace 1 min',
-        status: 'Nueva',
-        action: 'Validar referencia',
-        tagColor: 'orange'
-      };
+      saveVoiceBtn.disabled = true;
+      saveVoiceBtn.innerHTML = 'Guardando en base de datos…';
 
-      const list = getStoredRequests();
-      list.unshift(newReq);
-      saveRequests(list);
+      try {
+        const res = await fetch('api/requests.php', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            part: partTitle,
+            vehicle: text,
+            person: name,
+            phone: phone,
+            channel: 'Asistente de Voz'
+          })
+        });
 
-      // Limpiar formulario y cerrar
-      if (reqTextarea) reqTextarea.value = '';
-      if (voiceClientName) voiceClientName.value = '';
-      if (voiceClientPhone) voiceClientPhone.value = '';
-      dialog?.close();
+        const data = await res.json();
+        if (res.ok && data.success) {
+          if (reqTextarea) reqTextarea.value = '';
+          if (voiceClientName) voiceClientName.value = '';
+          if (voiceClientPhone) voiceClientPhone.value = '';
+          dialogAssistant?.close();
 
-      // Scroll a la sección de solicitudes
-      document.querySelector('#solicitudes')?.scrollIntoView({ behavior: 'smooth' });
+          await loadRequests();
+          await loadStats();
+
+          document.querySelector('#solicitudes')?.scrollIntoView({ behavior: 'smooth' });
+        } else {
+          alert(data.error || 'No se pudo guardar la solicitud.');
+        }
+      } catch (err) {
+        alert('Error conectando con la API del servidor.');
+      } finally {
+        saveVoiceBtn.disabled = false;
+        saveVoiceBtn.innerHTML = 'Guardar en Base de Datos <span>→</span>';
+      }
     });
   }
 
-  // 7. Botones de acción rápida en el panel
-  const quickActions = [
-    { id: '#btnRegVehiculo', label: 'Registro de vehículo CAT' },
-    { id: '#btnAltaPieza', label: 'Dar de alta una pieza en stock' },
-    { id: '#btnExpBaja', label: 'Crear expediente telemático de baja' },
-    { id: '#btnBuscarInv', label: 'Buscador de inventario' }
-  ];
+  // ==========================================
+  // HELPERS
+  // ==========================================
 
-  quickActions.forEach(action => {
-    const btn = document.querySelector(action.id);
-    if (btn) {
-      btn.addEventListener('click', () => {
-        alert(`Módulo "${action.label}":\nEste flujo abrirá el formulario específico en la siguiente fase de desarrollo.`);
-      });
+  function isAnyModalOpen() {
+    return !!document.querySelector('dialog[open]');
+  }
+
+  function isFormInputActive() {
+    const active = document.activeElement;
+    return active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' || active.tagName === 'SELECT');
+  }
+
+  function formatTimeAgo(isoString) {
+    if (!isoString) return 'reciente';
+    try {
+      const d = new Date(isoString);
+      const diffSecs = Math.floor((Date.now() - d.getTime()) / 1000);
+      if (diffSecs < 60) return 'hace un momento';
+      const diffMins = Math.floor(diffSecs / 60);
+      if (diffMins < 60) return `hace ${diffMins} min`;
+      const diffHours = Math.floor(diffMins / 60);
+      if (diffHours < 24) return `hace ${diffHours} h`;
+      const diffDays = Math.floor(diffHours / 24);
+      if (diffDays === 1) return 'ayer';
+      return `hace ${diffDays} d`;
+    } catch (e) {
+      return 'reciente';
     }
-  });
+  }
+
+  function formatDateTime(isoString) {
+    if (!isoString) return '';
+    try {
+      const d = new Date(isoString);
+      return d.toLocaleDateString('es-ES', {
+        day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit'
+      });
+    } catch (e) {
+      return isoString;
+    }
+  }
 
   function escapeHtml(str) {
     if (!str) return '';

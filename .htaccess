@@ -21,6 +21,16 @@ DirectoryIndex index.html
     Header set Referrer-Policy "strict-origin-when-cross-origin"
 </IfModule>
 
+# Bloquear acceso web directo a datos sensibles y archivos de configuración
+<FilesMatch "\.(json|sqlite|db|log|md|yml|yaml)$">
+    <IfModule mod_authz_core.c>
+        Require all denied
+    </IfModule>
+    <IfModule !mod_authz_core.c>
+        Deny from all
+    </IfModule>
+</FilesMatch>
+
 # Control de caché para CSS y JS (evita que el navegador use versiones viejas)
 <IfModule mod_expires.c>
     ExpiresActive On
